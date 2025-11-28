@@ -28,14 +28,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Get previous tag
+      - name: Get previous tag (may be empty on fork)
         id: previoustag
         uses: WyriHaximus/github-action-get-previous-tag@v1
+        continue-on-error: true
 
-      - name: Download previous artifact (qmk Python package)
+      - name: Download qmk matching previous tag (if any)
+        if: ${{ steps.previoustag.outputs.tag != '' }}
         run: |
           pip install --upgrade pip
           pip download -d "${GITHUB_WORKSPACE}/dist" qmk=="${{ steps.previoustag.outputs.tag }}"
+
+      - name: Download latest qmk (fallback when no tag found)
+        if: ${{ steps.previoustag.outputs.tag == '' }}
+        run: |
+          pip install --upgrade pip
+          pip download -d "${GITHUB_WORKSPACE}/dist" qmk
 
       - name: Set lowercase repo owner and repo name
         id: lowercase
@@ -62,4 +70,3 @@ jobs:
           tags: |
             ghcr.io/${{ env.owner_lc }}/${{ env.repo_lc }}:latest
             ghcr.io/${{ env.owner_lc }}/${{ env.repo_lc }}:${{ github.sha }}
-            ghcr.io/${{ env.owner_lc }}/${{ env.repo_lc }}:${{ steps.previoustag.outputs.tag }}
